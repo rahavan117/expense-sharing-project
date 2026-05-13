@@ -1,0 +1,174 @@
+pip install numpy prettytable
+import numpy as np
+from prettytable import PrettyTable
+
+# Friends list
+friends = ["vijay", "ajai", "davit", "rahul"]
+
+# Create expense matrix
+expense_matrix = np.zeros((len(friends), len(friends)))
+
+# Transaction history
+transaction_history = []
+
+
+# Function to add expense
+# Equal split
+
+def add_expense(payer, beneficiaries, amount, description):
+    payer_idx = friends.index(payer)
+
+    share_per_person = amount / len(beneficiaries)
+
+    for beneficiary in beneficiaries:
+        beneficiary_idx = friends.index(beneficiary)
+        expense_matrix[payer_idx][beneficiary_idx] += share_per_person
+
+    # Save history
+    transaction_history.append({
+        "payer": payer,
+        "beneficiaries": beneficiaries,
+        "amount": amount,
+        "description": description
+    })
+
+
+# Function for custom split
+
+def add_custom_expense(payer, split_details, description):
+    payer_idx = friends.index(payer)
+
+    total_amount = 0
+
+    for person, amount in split_details.items():
+        beneficiary_idx = friends.index(person)
+        expense_matrix[payer_idx][beneficiary_idx] += amount
+        total_amount += amount
+
+    transaction_history.append({
+        "payer": payer,
+        "beneficiaries": list(split_details.keys()),
+        "amount": total_amount,
+        "description": description
+    })
+
+
+# Calculate balances
+
+def calculate_settlements():
+    total_paid = np.sum(expense_matrix, axis=1)
+    total_owed = np.sum(expense_matrix, axis=0)
+
+    net_balance = total_paid - total_owed
+
+    return net_balance
+
+
+# Display settlements
+
+def display_settlements():
+    settlements = calculate_settlements()
+
+    table = PrettyTable()
+    table.field_names = ["Friend", "Balance"]
+
+    for i, friend in enumerate(friends):
+
+        if settlements[i] > 0:
+            table.add_row([friend, f"Should receive Rs.{settlements[i]:.2f}"])
+
+        elif settlements[i] < 0:
+            table.add_row([friend, f"Owes Rs.{-settlements[i]:.2f}"])
+
+        else:
+            table.add_row([friend, "Settled"])
+
+    print("\nFinal Settlements")
+    print(table)
+
+
+# Suggest payments
+
+def suggest_payments():
+    settlements = calculate_settlements()
+
+    creditors = [(friends[i], amt) for i, amt in enumerate(settlements) if amt > 0]
+    debtors = [(friends[i], -amt) for i, amt in enumerate(settlements) if amt < 0]
+
+    transactions = []
+
+    while debtors and creditors:
+
+        debtor, debt_amount = debtors.pop(0)
+        creditor, credit_amount = creditors.pop(0)
+
+        payment = min(debt_amount, credit_amount)
+
+        transactions.append((debtor, creditor, payment))
+
+        debt_amount -= payment
+        credit_amount -= payment
+
+        if debt_amount > 0:
+            debtors.insert(0, (debtor, debt_amount))
+
+        if credit_amount > 0:
+            creditors.insert(0, (creditor, credit_amount))
+
+    print("\nSuggested Transactions")
+
+    if transactions:
+        for debtor, creditor, amount in transactions:
+            print(f"{debtor} should pay Rs.{amount:.2f} to {creditor}")
+
+    else:
+        print("No transactions needed. Everyone settled.")
+
+
+# Display transaction history
+
+def show_history():
+
+    print("\nTransaction History")
+
+    for data in transaction_history:
+        print("--------------------------------")
+        print("Description :", data["description"])
+        print("Payer       :", data["payer"])
+        print("Amount      :", data["amount"])
+        print("Members     :", ", ".join(data["beneficiaries"]))
+
+
+# Sample Expenses
+
+add_expense(
+    "vijay",
+    ["vijay", "ajai", "davit"],
+    1250,
+    "Dinner Expense"
+)
+
+add_expense(
+    "ajai",
+    ["ajai", "davit"],
+    800,
+    "Movie Expense"
+)
+
+add_custom_expense(
+    "davit",
+    {
+        "vijay": 400,
+        "ajai": 500,
+        "davit": 600,
+        "rahul": 285
+    },
+    "Trip Expense"
+)
+
+
+# Function Calls
+
+show_history()
+display_settlements()
+suggest_payments()
